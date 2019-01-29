@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
 const auth = require('../auth');
+const validator = require('validator');
 const UserProfiles = mongoose.model('UserProfiles');
 
 //POST new user route (optional, everyone has access)
@@ -12,6 +13,14 @@ router.post('/', auth.optional, (req, res, next) => {
     return res.status(422).json({
       errors: {
         email: 'is required',
+      },
+    });
+  }
+
+  if (!validator.isEmail(userProfile.email)){
+    return res.status(400).json({
+      errors: {
+        email: 'is not valid',
       },
     });
   }
@@ -55,7 +64,11 @@ router.post('/login', auth.optional, (req, res, next) => {
 
   return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
     if(err) {
-      return next(err);
+      return res.status(403).json({
+        errors: {
+          password: 'password or email did not match',
+        },
+      });
     }
 
     if(passportUser) {
@@ -65,7 +78,11 @@ router.post('/login', auth.optional, (req, res, next) => {
       return res.json({ userProfile: user.toAuthJSON() });
     }
 
-    return status(400).info;
+    return res.status(400).json({
+      errors: {
+        password: 'password or email did not match',
+      },
+    });
   })(req, res, next);
 });
 
