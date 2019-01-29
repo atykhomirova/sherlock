@@ -64,9 +64,9 @@ router.post('/login', auth.optional, (req, res, next) => {
 
   return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
     if(err) {
-      return res.status(403).json({
+      return res.status(400).json({
         errors: {
-          password: 'password or email did not match',
+          message: 'password or email did not match',
         },
       });
     }
@@ -80,7 +80,7 @@ router.post('/login', auth.optional, (req, res, next) => {
 
     return res.status(400).json({
       errors: {
-        password: 'password or email did not match',
+        message: 'password or email did not match',
       },
     });
   })(req, res, next);
