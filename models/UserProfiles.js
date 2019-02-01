@@ -37,6 +37,7 @@ const UserProfilesSchema = new Schema({
     gender: {type: String},
     hash: String,
     salt: String,
+    token: String
 });
 
 UserProfilesSchema.methods.setPassword = function (password) {
@@ -47,6 +48,15 @@ UserProfilesSchema.methods.setPassword = function (password) {
 UserProfilesSchema.methods.setEmail = function (email) {
     this.emails = [{email: email}];
 };
+
+UserProfilesSchema.methods.setPhone = function (phone) {
+    this.phones = [{phone: phone}];
+};
+
+UserProfilesSchema.methods.setToken = function (token) {
+    this.token = token;
+};
+
 
 UserProfilesSchema.methods.validatePassword = function (password) {
     const hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
@@ -61,14 +71,21 @@ UserProfilesSchema.methods.generateJWT = function () {
     return jwt.sign({
         email: this.email,
         id: this._id,
-        exp: parseInt(expirationDate.getTime() / 1000, 10),
+        exp: parseInt(expirationDate.getTime() / 1000, 10)
     }, 'secret');
 };
 
 UserProfilesSchema.methods.toAuthJSON = function () {
     return {
         _id: this._id,
-        token: this.generateJWT(),
+        token: this.generateJWT()
+    };
+};
+
+UserProfilesSchema.methods.getUserProfile = function () {
+    return {
+        _id: this._id,
+        token: this.generateJWT()
     };
 };
 
