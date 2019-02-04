@@ -156,6 +156,41 @@ router.get('/confirm', async function (req, res) {
         });
 });
 
+router.get('/send_confirm', async function (req, res) {
+    const id = req.query.id;
+    const email = req.query.email;
+
+    var isConfirmEmail = await checkEmailForConfirm(email);
+    if (isConfirmEmail) {
+        return res.status(401).json({
+            errors: {
+                code: 401,
+                message: 'Email was confirm another user'
+            }
+        });
+    }
+
+    UserProfiles.findById(id).then((userProfile) => {
+        var user = JSON.parse(JSON.stringify(userProfile));
+        var rand = crypto.randomBytes(64).toString('hex');
+        user.token = rand;
+        UserProfiles.update({_id: id}, user, function (err, result) {
+            if (err) {
+                return res.status(400).json({
+                    errors: {
+                        message: 'User not updated'
+                    }
+                });
+            } else {
+                sendConfirmEmail(id, email, rand);
+                return res.json({userProfiles: userProfile.toAuthJSON()});
+            }
+        });
+
+    });
+
+});
+
 const checkExistUser = async (email, phone, password) => {
     var userProfiles = await UserProfiles.find({$or: [{emails: {$elemMatch: {email: email}}}, {phones: {$elemMatch: {phone: phone}}}]}).exec();
     for (var i = 0; i < userProfiles.length; i++) {
