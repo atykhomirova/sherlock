@@ -2,26 +2,22 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
 const auth = require('../../auth');
-const validator = require('validator');
 const crypto = require('crypto');
 const UserProfiles = mongoose.model('UserProfiles');
-const nodemailer = require("nodemailer");
+
+const UserService = require('./service/userService.js');
+const SendService = require('./service/sendService.js');
+
+const userService = new UserService();
+const sendService = new SendService();
 mongoose.set('useFindAndModify', false);
 
-const smtpTransport = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-        user: "sherlockapi@gmail.com",
-        pass: "CyberSherlock#19"
-    }
-});
-
-var rand, mailOptions, link;
+var rand;
 
 router.post('/', auth.optional, async (req, res, next) => {
     const {body: {userProfile}} = req;
 
-    var isNotValidParams = await checkEmailPhonePassword(userProfile.email, userProfile.phone, userProfile.password);
+    var isNotValidParams = await userService.checkEmailPhonePassword(userProfile.email, userProfile.phone, userProfile.password);
     if (isNotValidParams) {
         return res.status(isNotValidParams).json({
             errors: {
@@ -31,8 +27,8 @@ router.post('/', auth.optional, async (req, res, next) => {
         });
     }
 
-    var isExistUser = await checkExistUser(userProfile.email, userProfile.phone, userProfile.password);
-    if (isExistUser) {
+    var isExistUser = await userService.checkExistUser(userProfile.email, userProfile.phone, userProfile.password);
+    if (isExistUser.length > 0) {
         return res.status(409).json({
             errors: {
                 code: 409,
@@ -56,7 +52,7 @@ router.post('/', auth.optional, async (req, res, next) => {
     return finalUser.save()
         .then((finalUser) => {
             if (userProfile.email) {
-                sendConfirmEmail(finalUser._id, userProfile.email, finalUser.token);
+                sendService.sendConfirmEmail(finalUser._id, userProfile.email, finalUser.token);
             }
         }).then(() => res.json({userProfile: finalUser.toAuthJSON()}));
 });
@@ -120,7 +116,7 @@ router.get('/confirm', async function (req, res) {
     const email = req.query.email;
     const token = req.query.token;
 
-    var isEmailConfirm = await checkEmailForConfirm(email);
+    var isEmailConfirm = await userService.checkEmailForConfirm(email);
     if (isEmailConfirm){
         return res.status(401).json({
             errors: {
@@ -160,7 +156,7 @@ router.get('/send_confirm', async function (req, res) {
     const id = req.query.id;
     const email = req.query.email;
 
-    var isConfirmEmail = await checkEmailForConfirm(email);
+    var isConfirmEmail = await userService.checkEmailForConfirm(email);
     if (isConfirmEmail) {
         return res.status(401).json({
             errors: {
@@ -182,7 +178,7 @@ router.get('/send_confirm', async function (req, res) {
                     }
                 });
             } else {
-                sendConfirmEmail(id, email, rand);
+                sendService.sendConfirmEmail(id, email, rand);
                 return res.json({userProfiles: userProfile.toAuthJSON()});
             }
         });
@@ -190,65 +186,6 @@ router.get('/send_confirm', async function (req, res) {
     });
 
 });
-
-const checkExistUser = async (email, phone, password) => {
-    var userProfiles = await UserProfiles.find({$or: [{emails: {$elemMatch: {email: email}}}, {phones: {$elemMatch: {phone: phone}}}]}).exec();
-    for (var i = 0; i < userProfiles.length; i++) {
-        if (userProfiles[i].validatePassword(password)) {
-            return true;
-        }
-    }
-};
-
-const checkEmailPhonePassword = async (email, phone, password) => {
-    if (!email && !phone) {
-        return 402;
-    }
-    if (email && !validator.isEmail(email)) {
-        return 405;
-    }
-
-    if (phone && !validator.isMobilePhone(phone, 'any')) {
-        return 406;
-    }
-    if (!password) {
-        return 407;
-    }
-
-};
-
-const sendConfirmEmail = (id, email, token) => {
-    link = "http://localhost:8000/api/v1.0/users/confirm?id=" + id + "&email=" + email + '&token=' + token;
-    mailOptions = {
-        to: email,
-        subject: "Please confirm your Email account",
-        html: "Hello,<br> Please Click on the link to confirm your email.<br><a href=" + link + ">Click here to verify</a>"
-    };
-    smtpTransport.sendMail(mailOptions, function (error, response) {
-        if (error) {
-            console.log(error);
-            res.end("error");
-        } else {
-            console.log("Message sent: " + response.message);
-            res.end("sent");
-        }
-    });
-};
-
-const checkEmailForConfirm = async (email) => {
-    var userProfiles = await UserProfiles.find({emails: {$elemMatch: {email: email}}}).exec();
-    var users = JSON.parse(JSON.stringify(userProfiles));
-    if (users.length > 0){
-        for (var i = 0; i < users.length; i++){
-            if (users[0].emails.length > 0)
-            for (var j = 0; j < users[i].emails.length; j++){
-                if (users[i].emails[j].primary && users[i].emails[j].status){
-                    return true;
-                }
-            }
-        }
-    }
-};
 
 module.exports = router;
 
