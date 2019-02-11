@@ -5,6 +5,7 @@ const session = require('express-session');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const errorHandler = require('errorhandler');
+const config = require( './config.json');
 
 //Configure mongoose's promise to global promise
 mongoose.promise = global.Promise;
@@ -28,37 +29,38 @@ if(!isProduction) {
 }
 
 //Configure Mongoose
-mongoose.connect('mongodb://localhost/sherlock');
+mongoose.connect(config.db.url + config.db.name);
 mongoose.set('debug', true);
 
 //Models & routes
 require('./models/UserProfiles');
 require('./config/passport');
-app.use(require('./routes'));
+app.use('/api/v1.0/users', require('./routes/api/v1.0/users'));
+app.use('/api/v1.0/confirm', require('./routes/api/v1.0/confirm'));
 
 //Error handlers & middlewares
-if(!isProduction) {
-  app.use((err, req, res) => {
-    res.status(err.status || 500);
-
-    res.json({
-      errors: {
-        message: err.message,
-        error: err,
-      },
-    });
-  });
-}
-
-app.use((err, req, res) => {
-  res.status(err.status || 500);
-
-  res.json({
-    errors: {
-      message: err.message,
-      error: {},
-    },
-  });
-});
+// if(!isProduction) {
+//   app.use((err, req, res) => {
+//     res.status(err.status || 500);
+//
+//     res.json({
+//       errors: {
+//         message: err.message,
+//         error: err,
+//       },
+//     });
+//   });
+// }
+//
+// app.use((err, req, res) => {
+//   res.status(err.status || 500);
+//
+//   res.json({
+//     errors: {
+//       message: err.message,
+//       error: {},
+//     },
+//   });
+// });
 
 app.listen(8000, () => console.log('Server running on http://localhost:8000/'));
