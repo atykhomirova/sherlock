@@ -1,18 +1,17 @@
+const path = require('path');
+global.appRoot = path.resolve(__dirname + '/../../');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
 const auth = require('../../auth');
 const crypto = require('crypto');
 const UserProfiles = mongoose.model('UserProfiles');
-
-const UserService = require('./service/userService.js');
-const SendService = require('./service/sendService.js');
+const randomSTR = require('randomstring');
+const Log = require('./log');
+const xhr = require('../lib/xhr');
 
 const userService = new UserService();
-const sendService = new SendService();
 mongoose.set('useFindAndModify', false);
-
-var rand;
 
 router.post('/', auth.optional, async (req, res, next) => {
     const {body: {userProfile}} = req;
@@ -29,9 +28,9 @@ router.post('/', auth.optional, async (req, res, next) => {
 
     var isExistUser = await userService.checkExistUser(userProfile.email, userProfile.phone, userProfile.password);
     if (isExistUser.length > 0) {
-        return res.status(409).json({
+        return res.status(401).json({
             errors: {
-                code: 409,
+                code: 1409,
                 message: 'User already exists!'
             }
         });
@@ -39,10 +38,9 @@ router.post('/', auth.optional, async (req, res, next) => {
 
     const finalUser = new UserProfiles(userProfile);
     finalUser.setPassword(userProfile.password);
+    var code = randomSTR.generate(6);
     if (userProfile.email) {
-        finalUser.setEmail(userProfile.email);
-        rand = crypto.randomBytes(64).toString('hex');
-        finalUser.setToken(rand);
+        finalUser.setEmail(userProfile.email, code);
     }
 
     if (userProfile.phone) {
@@ -52,27 +50,28 @@ router.post('/', auth.optional, async (req, res, next) => {
     return finalUser.save()
         .then((finalUser) => {
             if (userProfile.email) {
-                sendService.sendConfirmEmail(finalUser._id, userProfile.email, finalUser.token);
+                sendService.sendConfirmEmail(finalUser._id, userProfile.email, code);
             }
-        }).then(() => res.json({userProfile: finalUser.toAuthJSON()}));
+        }).then(() => res.json({userProfile: finalUser.toAuthJSON()}))
+        .catch(err => Log(err));
 });
 
 router.post('/login', auth.optional, (req, res, next) => {
     const {body: {userProfile}} = req;
 
     if (!userProfile.login) {
-        return res.status(408).json({
+        return res.status(401).json({
             errors: {
-                code: 408,
+                code: 1408,
                 message: 'Login is empty'
             }
         });
     }
 
     if (!userProfile.password) {
-        return res.status(407).json({
+        return res.status(401).json({
             errors: {
-                code: 407,
+                code: 1407,
                 message: 'Password is empty'
             }
         });
@@ -85,9 +84,9 @@ router.post('/login', auth.optional, (req, res, next) => {
             return res.json({userProfile: user.toAuthJSON()});
         }
 
-        return res.status(403).json({
+        return res.status(401).json({
             errors: {
-                code: 403,
+                code: 1403,
                 message: 'Password and login did not match',
             },
         });
@@ -100,9 +99,9 @@ router.get('/current', auth.required, (req, res, next) => {
     return UserProfiles.findById(id)
         .then((userProfile) => {
             if (!userProfile) {
-                return res.status(404).json({
+                return res.status(401).json({
                     errors: {
-                        code: 404,
+                        code: 1404,
                         message: 'User not found'
                     }
                 });
@@ -117,39 +116,16 @@ router.get('/confirm', async function (req, res) {
     const token = req.query.token;
 
     var isEmailConfirm = await userService.checkEmailForConfirm(email);
-    if (isEmailConfirm){
+    if (isEmailConfirm) {
         return res.status(401).json({
             errors: {
-                code: 401,
+                code: 1401,
                 message: 'Email was confirm another user'
             }
         });
     }
-    UserProfiles.findById(id)
-        .then((userProfile) => {
-            var user = JSON.parse(JSON.stringify(userProfile));
-            if (user.token === token) {
-                for (var i = 0; i < user.emails.length; i++) {
-                    var userEmail = user.emails[i];
-                    if (userEmail.email === email) {
-                        userEmail.primary = true;
-                        userEmail.status = true;
-                        user.token = null;
-                    }
-                }
-                UserProfiles.update({_id: id}, user, function (err, result) {
-                    if (err) {
-                        return res.status(400).json({
-                            errors: {
-                                message: 'User not updated'
-                            }
-                        });
-                    } else {
-                        return res.json({userProfiles: userProfile.toAuthJSON()});
-                    }
-                });
-            }
-        });
+
+    await userService.updateUserEmail(id, token, email, res);
 });
 
 router.get('/send_confirm', async function (req, res) {
@@ -160,17 +136,16 @@ router.get('/send_confirm', async function (req, res) {
     if (isConfirmEmail) {
         return res.status(401).json({
             errors: {
-                code: 401,
+                code: 1401,
                 message: 'Email was confirm another user'
             }
         });
     }
 
     UserProfiles.findById(id).then((userProfile) => {
-        var user = JSON.parse(JSON.stringify(userProfile));
         var rand = crypto.randomBytes(64).toString('hex');
-        user.token = rand;
-        UserProfiles.update({_id: id}, user, function (err, result) {
+        userProfile.token = rand;
+        UserProfiles.update({_id: id}, userProfile, function (err, result) {
             if (err) {
                 return res.status(400).json({
                     errors: {

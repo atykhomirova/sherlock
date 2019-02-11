@@ -1,0 +1,73 @@
+{
+  "app": {
+    "name": "Cyber Sherlock",
+    "host": "http://localhost",
+    "port": 3080,
+    "mode": 0,
+    "path": "/Users/anastasiiatykhomirova/home/CyberSherlock",
+    "log": {
+      "console": 1,
+      "file": 1,
+      "path": "/Users/anastasiiatykhomirova/home/CyberSherlock/Log"
+    },
+    "services": {
+      "ipPool": ["127.0.0.1"],
+      "portPool": [9000, 10000],
+      "checkInterval": 600000,
+      "protocol": "http"
+    },
+    "errors": {
+      "sendAdmin": true
+    },
+    "admin": {
+      "email": "mborodyn@ecoengineer.in.ua"
+    }
+  },
+  "db": {
+    "connect": "mongodb://localhost/sherlock",
+    "name": "sherlock",
+    "user": "mongoCyber",
+    "password": "a557dbfd4be7eb7d135290643d41ec27",
+    "host": "localhost",
+    "port": 27017
+  },
+  "smtp": {
+    "service": "Gmail",
+    "auth": {
+      "user": "sherlockapi@gmail.com",
+      "pass": "CyberSherlock#19"
+    }
+  },
+  "email":{
+    "defaultSubject": "TRIUMF SERVICE",
+    "defaultSenderEmail":"mborodyn@ecoengineer.in.ua",
+    "smtpHost": "freemail.freehost.com.ua",
+    "smtpPort": 465,
+    "smtpSecure": true,
+    "smtpUser": "mborodyn@ecoengineer.in.ua",
+    "smtpPass": "borMyk7",
+    "codeLength": 6
+  },
+  "phone":{
+    "codeLength": 6
+  },
+  "auth": {
+    "tokenExp": 3600,
+    "facebook": {
+      "clientId": "170302263538571",
+      "clientSecret": "d5a3b1add21f81dcfab881d83a422748",
+      "callbackURL": "",
+      "profileURL": "https://graph.facebook.com/v2.5/me?fields=first_name,last_name,email",
+      "profileFields": ["id", "email", "name"]
+    },
+    "google": {
+      "apiKey": "AIzaSyCQqiOB_uS2YEbV5d9vsPUpb4s5VavxulQ",
+      "clientId": "614754642660-hhpv7vv258h3f4h55uavv5glnhb46ctu.apps.googleusercontent.com",
+      "clientSecret": "460dDbvoTichx4JLr4E_RDse",
+      "scopes": "profile",
+      "tokenURL": "https://www.googleapis.com/oauth2/v3/tokeninfo?access_token="
+    },
+    "linked": {},
+    "twitter": {}
+  }
+}
