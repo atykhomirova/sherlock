@@ -45,7 +45,11 @@ UserProfilesSchema.methods.setPassword = function (password) {
     this.hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
 };
 
-UserProfilesSchema.methods.setEmail = function (email, code) {
+UserProfilesSchema.methods.setEmail = function (email) {
+    this.emails = [{email: email}];
+};
+
+UserProfilesSchema.methods.setEmailAndCode = function (email, code) {
     this.emails = [{email: email, code: code}];
 };
 

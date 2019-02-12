@@ -1,16 +1,21 @@
-const ConfirmService = require('../service/ConfirmService.js');
+const path = require('path');
+global.appRoot = path.resolve(__dirname + '/../');
+const confirmService = require(appRoot + '/service/ConfirmService.js');
 
-const confirmService = new ConfirmService();
-
-function ConfirmController() {
-}
-
-ConfirmController.prototype.sendConfirmEmail = function(req, res, next){
+function sendConfirmEmail(req, res, next){
     return confirmService.sendConfirmEmail(req, res, next);
 };
 
-ConfirmController.prototype.checkConfirmEmail = async function(req, res, next){
+async function checkConfirmEmail(req, res, next){
     return confirmService.checkConfirmEmail(req, res, next);
 };
 
-module.exports = ConfirmController;
+function sendConfirmPhone(req, res, next){
+    return confirmService.sendConfirmPhone(req, res, next);
+};
+
+module.exports = {
+    sendConfirmEmail: sendConfirmEmail,
+    checkConfirmEmail: checkConfirmEmail,
+    sendConfirmPhone: sendConfirmPhone
+};

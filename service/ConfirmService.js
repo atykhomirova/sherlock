@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
-const nodemailer = require("nodemailer");
 const UserProfiles = mongoose.model('UserProfiles');
-const config = require( '../config.json');
+const nodemailer = require("nodemailer");
+const path = require('path');
+global.appRoot = path.resolve(__dirname + '/../');
+const config = require( appRoot + '/config.json');
 const randomSTR = require('randomstring');
 
-function ConfirmService() {}
+function sendEmail(id, email, code, res) {
+    let mailOptions, link;
 
-ConfirmService.prototype.sendEmail = function (id, email, code, res) {
-    var mailOptions, link;
-
-    var smtpTransport = nodemailer.createTransport({
+    let smtpTransport = nodemailer.createTransport({
         service: config.smtp.service,
         auth: {
             user: config.smtp.auth.user,
@@ -34,19 +34,14 @@ ConfirmService.prototype.sendEmail = function (id, email, code, res) {
     });
 };
 
-ConfirmService.prototype.checkEmailForConfirm = async function (email, res) {
-    var userProfiles = await UserProfiles.find({emails: {$elemMatch: {email: email}}}).exec();
+async function checkEmailForConfirm(email, res) {
+    let userProfiles = await UserProfiles.find({emails: {$elemMatch: {email: email}}}).exec();
     if (userProfiles.length > 0) {
-        for (var i = 0; i < userProfiles.length; i++) {
+        for (let i = 0; i < userProfiles.length; i++) {
             if (userProfiles[0].emails.length > 0){
-                for (var j = 0; j < userProfiles[i].emails.length; j++) {
+                for (let j = 0; j < userProfiles[i].emails.length; j++) {
                     if (userProfiles[i].emails[j].primary && userProfiles[i].emails[j].status) {
-                        return res.status(401).json({
-                            errors: {
-                                code: 401,
-                                message: 'Email was confirm another user'
-                            }
-                        });
+                        throw new Error({code: 1401, message:'Email was confirm another user'});
                     }
                 }
             }
@@ -54,24 +49,55 @@ ConfirmService.prototype.checkEmailForConfirm = async function (email, res) {
     }
 };
 
-ConfirmService.prototype.checkConfirmEmail = async function(req, res, next){
+async function checkConfirmEmail(req, res, next){
     const id = req.query.id;
     const email = req.query.email;
     const token = req.query.token;
 
-    var checkEmailForConfirm = await this.checkEmailForConfirm(email, res);
-    if (checkEmailForConfirm){
-        return checkEmailForConfirm;
+    try {
+        await this.checkEmailForConfirm(email, res);
+
+        UserProfiles.findById(id)
+            .then((userProfile) => {
+                for (let i = 0; i < userProfile.emails.length; i++) {
+                    let userEmail = userProfile.emails[i];
+                    if (userEmail.email === email && userEmail.code === token) {
+                        userEmail.primary = true;
+                        userEmail.status = true;
+                        userEmail.code = "000000";
+                    }
+                }
+                UserProfiles.update({_id: id}, userProfile, function (err, result) {
+                    if (err) {
+                        return res.status(400).json({
+                            errors: {
+                                message: 'User not updated'
+                            }
+                        });
+                    } else {
+                        return res.json({userProfiles: userProfile.toAuthJSON()});
+                    }
+                });
+            }).catch(err => next(err));
+    }catch (err) {
+        return err => {res.status(401).json(err.error)};
     }
 
-    UserProfiles.findById(id)
-        .then((userProfile) => {
-            for (var i = 0; i < userProfile.emails.length; i++) {
-                var userEmail = userProfile.emails[i];
-                if (userEmail.email === email && userEmail.code === token) {
-                    userEmail.primary = true;
-                    userEmail.status = true;
-                    userEmail.code = "000000";
+};
+
+async function sendConfirmEmail(req, res, next){
+    const id = req.query.id;
+    const email = req.query.email;
+
+    try {
+        await this.checkEmailForConfirm(email, res);
+
+        UserProfiles.findById(id).then((userProfile) => {
+            let code = randomSTR.generate(6);
+            for (let i = 0; i < userProfile.emails.length; i++) {
+                let userEmail = userProfile.emails[i];
+                if (userEmail.email === email) {
+                    userEmail.code = code;
                 }
             }
             UserProfiles.update({_id: id}, userProfile, function (err, result) {
@@ -82,43 +108,30 @@ ConfirmService.prototype.checkConfirmEmail = async function(req, res, next){
                         }
                     });
                 } else {
+                    this.sendEmail(id, email, code, res);
                     return res.json({userProfiles: userProfile.toAuthJSON()});
                 }
             });
+
         }).catch(err => next(err));
-};
-
-ConfirmService.prototype.sendConfirmEmail = async function(req, res, next){
-    const id = req.query.id;
-    const email = req.query.email;
-
-    var checkEmailForConfirm = await this.checkEmailForConfirm(email, res);
-    if (checkEmailForConfirm){
-        return checkEmailForConfirm;
+    }catch (err) {
+        return err => {res.status(401).json(err.error)};
     }
 
-    UserProfiles.findById(id).then((userProfile) => {
-        var code = randomSTR.generate(6);
-        for (var i = 0; i < userProfile.emails.length; i++) {
-            var userEmail = userProfile.emails[i];
-            if (userEmail.email === email) {
-                userEmail.code = code;
-            }
-        }
-        UserProfiles.update({_id: id}, userProfile, function (err, result) {
-            if (err) {
-                return res.status(400).json({
-                    errors: {
-                        message: 'User not updated'
-                    }
-                });
-            } else {
-                this.sendEmail(id, email, code, res);
-                return res.json({userProfiles: userProfile.toAuthJSON()});
-            }
-        });
-
-    }).catch(err => next(err));
 };
 
-module.exports = ConfirmService;
+async function sendConfirmPhone(req, res, next){
+    return res.status(400).json({
+        errors: {
+            message: 'Not implemented'
+        }
+    });
+}
+
+module.exports = {
+    sendEmail: sendEmail,
+    checkEmailForConfirm: checkEmailForConfirm,
+    checkConfirmEmail: checkConfirmEmail,
+    sendConfirmEmail: sendConfirmEmail,
+    sendConfirmPhone: sendConfirmPhone
+};

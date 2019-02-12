@@ -1,20 +1,16 @@
-const UserService = require('../service/UserService.js');
+const path = require('path');
+global.appRoot = path.resolve(__dirname + '/../');
+const userService = require(appRoot + '/service/UserService.js');
 
-const userService = new UserService();
-
-function UserController() {
-}
-
-UserController.prototype.createUser = async function(req, res, next){
+async function createUser(req, res, next){
     return userService.saveUser(req, res, next);
 };
 
-UserController.prototype.loginUser = async function(req, res, next){
-    return userService.loginUser(req, res, next);
+async function updateUser(req, res, next){
+    return userService.updateUser(req, res, next);
 };
 
-UserController.prototype.getCurrentUser = async function(req, res, next){
-    return userService.getCurrentUser(req, res, next);
+module.exports = {
+    createUser: createUser,
+    updateUser: updateUser
 };
-
-module.exports = UserController;

@@ -1,11 +1,12 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const session = require('express-session');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const errorHandler = require('errorhandler');
-const config = require( './config.json');
+global.appRoot = path.resolve(__dirname + '/.');
+const config = require( appRoot + '/config.json');
+
 
 //Configure mongoose's promise to global promise
 mongoose.promise = global.Promise;
@@ -22,7 +23,7 @@ app.use(require('morgan')('dev'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(session({ secret: 'sherlock', cookie: { maxAge: 60000 }, resave: false, saveUninitialized: false }));
+// app.use(session({ secret: 'sherlock', cookie: { maxAge: 60000 }, resave: false, saveUninitialized: false }));
 
 if(!isProduction) {
   app.use(errorHandler());
@@ -37,6 +38,7 @@ require('./models/UserProfiles');
 require('./config/passport');
 app.use('/api/v1.0/users', require('./routes/api/v1.0/users'));
 app.use('/api/v1.0/confirm', require('./routes/api/v1.0/confirm'));
+app.use('/api/v1.0/auth', require('./routes/api/v1.0/auth'));
 
 //Error handlers & middlewares
 // if(!isProduction) {

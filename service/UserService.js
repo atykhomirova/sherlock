@@ -1,153 +1,89 @@
 const mongoose = require('mongoose');
 const UserProfiles = mongoose.model('UserProfiles');
 const validator = require('validator');
-const passport = require('passport');
-const randomSTR = require('randomstring');
 
-const ConfirmService = require('../service/ConfirmService.js');
-
-const confirmService = new ConfirmService();
-
-function UserService() {
-}
-
-UserService.prototype.checkExistUser = async function (email, phone, password, res) {
-    var userProfiles = await UserProfiles.find({$or: [{emails: {$elemMatch: {email: email}}}, {phones: {$elemMatch: {phone: phone}}}]}).exec();
-    var isExistUser = await userProfiles.filter(function (userProfile) {
+async function checkExistUser(email, phone, password, res) {
+    let userProfiles = await UserProfiles.find({$or: [{emails: {$elemMatch: {email: email}}}, {phones: {$elemMatch: {phone: phone}}}]}).exec();
+    let isExistUser = await userProfiles.filter(function (userProfile) {
         return userProfile.validatePassword(password);
     });
     if (isExistUser.length > 0) {
-        return res.status(401).json({
-            errors: {
-                code: 1409,
-                message: 'User already exists!'
-            }
-        });
+        throw new Error(1409);
     }
 };
 
-UserService.prototype.saveUser = async function(req, res, next){
+async function saveUser(req, res, next) {
     const {body: {userProfile}} = req;
 
-    var checkEmailPhonePassword = await this.checkEmailPhonePassword(userProfile.email, userProfile.phone, userProfile.password, res);
-    if (checkEmailPhonePassword) {
-        return checkEmailPhonePassword;
-    }
+    try {
+        await this.checkEmailPhonePassword(userProfile.email, userProfile.phone, userProfile.password, res);
 
-    var checkExistUser = await this.checkExistUser(userProfile.email, userProfile.phone, userProfile.password, res);
-    if (checkExistUser){
-        return checkExistUser;
-    }
+        await this.checkExistUser(userProfile.email, userProfile.phone, userProfile.password, res);
 
-    const finalUser = new UserProfiles(userProfile);
-    finalUser.setPassword(userProfile.password);
-    var code =  randomSTR.generate(6);
-    if (userProfile.email) {
-        finalUser.setEmail(userProfile.email, code);
-    }
+        const finalUser = new UserProfiles(userProfile);
+        finalUser.setPassword(userProfile.password);
 
-    if (userProfile.phone) {
-        finalUser.setPhone(userProfile.phone);
-    }
+        if (userProfile.email) {
+            finalUser.setEmail(userProfile.email);
+        }
 
-    return finalUser.save()
-        .then((finalUser) => {
-            if (userProfile.email) {
-                confirmService.sendEmail(finalUser._id, userProfile.email, code, res);
+        if (userProfile.phone) {
+            finalUser.setPhone(userProfile.phone);
+        }
+
+        return finalUser.save()
+            .then(() => res.json({userProfile: finalUser.toAuthJSON()}))
+            .catch(err => next(err));
+
+    } catch (err) {
+        return res.status(401).json({
+            errors: {
+                code: err.message
             }
-        }).then(() => res.json({userProfile: finalUser.toAuthJSON()}))
-        .catch(err => next(err));
+        });
+    }
 };
 
-UserService.prototype.checkEmailPhonePassword = async function (email, phone, password, res) {
+async function checkEmailPhonePassword(email, phone, password, res) {
     if (!email && !phone) {
-        return res.status(401).json({
-            errors: {
-                code: 1402,
-                message: 'Enter correct param'
-            }
-        });
+        throw new Error(1402);
     }
     if (email && !validator.isEmail(email)) {
-        return res.status(401).json({
-            errors: {
-                code: 1405,
-                message: 'Enter correct param'
-            }
-        });
+        throw new Error(1405);
     }
 
     if (phone && !validator.isMobilePhone(phone, 'any')) {
-        return res.status(401).json({
-            errors: {
-                code: 1406,
-                message: 'Enter correct param'
-            }
-        });
+        throw new Error(1406);
     }
     if (!password) {
-        return res.status(401).json({
-            errors: {
-                code: 1407,
-                message: 'Enter correct param'
-            }
-        });
+        throw new Error(1407);
     }
 
 };
 
-UserService.prototype.loginUser = function(req, res, next){
+function updateUser(req, res, next) {
     const {body: {userProfile}} = req;
-
-    if (!userProfile.login) {
-        return res.status(401).json({
-            errors: {
-                code: 1408,
-                message: 'Login is empty'
-            }
-        });
-    }
-
-    if (!userProfile.password) {
-        return res.status(401).json({
-            errors: {
-                code: 1407,
-                message: 'Password is empty'
-            }
-        });
-    }
-
-    return passport.authenticate('local', {session: false}, (err, passportUser, info) => {
-        if (passportUser) {
-            const user = passportUser;
-            user.token = passportUser.generateJWT();
-            return res.json({userProfile: user.toAuthJSON()});
-        }
-
-        return res.status(401).json({
-            errors: {
-                code: 1403,
-                message: 'Password and login did not match',
-            },
-        });
-    })(req, res, next);
-};
-
-UserService.prototype.getCurrentUser = function(req, res, next){
-    const {payload: {id}} = req;
-
-    return UserProfiles.findById(id)
-        .then((userProfile) => {
-            if (!userProfile) {
-                return res.status(401).json({
-                    errors: {
-                        code: 1404,
-                        message: 'User not found'
+    if (userProfile.id) {
+        UserProfiles.findById(userProfile.id)
+            .then((user) => {
+                UserProfiles.update({_id: userProfile.id}, userProfile, function (err, result) {
+                    if (err) {
+                        return res.status(400).json({
+                            errors: {
+                                message: 'User not updated'
+                            }
+                        });
+                    } else {
+                        return res.json({userProfiles: user.toAuthJSON()});
                     }
                 });
-            }
-            return res.json({userProfiles: userProfile.toAuthJSON()});
-        }).catch(err => next(err));
+            }).catch(err => next(err));
+    }
 };
 
-module.exports = UserService;
+module.exports = {
+    checkExistUser: checkExistUser,
+    saveUser: saveUser,
+    checkEmailPhonePassword: checkEmailPhonePassword,
+    updateUser: updateUser
+};

@@ -1,26 +1,10 @@
-const jwt = require('express-jwt');
+const router = require('express').Router();
+const path = require('path');
+global.appRoot = path.resolve(__dirname + '/../../../');
+const auth = require(appRoot + '/lib/auth');
 
-const getTokenFromHeaders = (req) => {
-  const { headers: { authorization } } = req;
+const authController = require(appRoot + '/controller/AuthController.js');
 
-  if(authorization && authorization.split(' ')[0] === 'Token') {
-    return authorization.split(' ')[1];
-  }
-  return null;
-};
+router.post('/login', auth.optional, authController.loginUser);
 
-const auth = {
-  required: jwt({
-    secret: 'secret',
-    userProperty: 'payload',
-    getToken: getTokenFromHeaders,
-  }),
-  optional: jwt({
-    secret: 'secret',
-    userProperty: 'payload',
-    getToken: getTokenFromHeaders,
-    credentialsRequired: false,
-  }),
-};
-
-module.exports = auth;
+module.exports = router;
