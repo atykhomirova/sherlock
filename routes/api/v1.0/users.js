@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const auth = require(`${appRoot}/lib/auth`);
 
-const userController = require(appRoot + '/controller/UserController.js');
+const userController = require(`${appRoot}/controller/UserController`);
 
 router.post('/', auth.optional, userController.createUser);
 
