@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const UserProfiles = mongoose.model('UserProfiles');
 const nodemailer = require("nodemailer");
-const path = require('path');
-global.appRoot = path.resolve(__dirname + '/../');
-const config = require( appRoot + '/config.json');
+const config = require( `${appRoot}/config.json`);
 const randomSTR = require('randomstring');
 
 function sendEmail(id, email, code, res) {

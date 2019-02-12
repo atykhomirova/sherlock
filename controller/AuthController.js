@@ -1,6 +1,4 @@
-const path = require('path');
-global.appRoot = path.resolve(__dirname + '/../');
-const authService = require(appRoot + '/service/AuthService.js');
+const authService = require(`${appRoot}/service/AuthService`);
 
 async function loginUser(req, res, next){
     return authService.loginUser(req, res, next);

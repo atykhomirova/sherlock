@@ -1,6 +1,4 @@
-const path = require('path');
-global.appRoot = path.resolve(__dirname + '/../');
-const confirmService = require(appRoot + '/service/ConfirmService.js');
+const confirmService = require(`${appRoot}/service/ConfirmService`);
 
 function sendConfirmEmail(req, res, next){
     return confirmService.sendConfirmEmail(req, res, next);

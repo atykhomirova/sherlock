@@ -1,6 +1,4 @@
-const path = require('path');
-global.appRoot = path.resolve(__dirname + '/../');
-const userService = require(appRoot + '/service/UserService.js');
+const userService = require(`${appRoot}/service/UserService`);
 
 async function createUser(req, res, next){
     return userService.saveUser(req, res, next);

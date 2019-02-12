@@ -4,8 +4,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const errorHandler = require('errorhandler');
-global.appRoot = path.resolve(__dirname + '/.');
-const config = require( appRoot + '/config.json');
+global.appRoot = path.resolve(__dirname);
+const config = require(  `${appRoot}/config.json`);
 
 
 //Configure mongoose's promise to global promise

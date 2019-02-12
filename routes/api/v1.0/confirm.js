@@ -1,8 +1,5 @@
 const router = require('express').Router();
-const path = require('path');
-global.appRoot = path.resolve(__dirname + '/../../../');
-
-const confirmController = require(appRoot + '/controller/ConfirmController.js');
+const confirmController = require(`${appRoot}/controller/ConfirmController`);
 
 router.get('/', confirmController.checkConfirmEmail);
 
