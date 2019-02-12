@@ -14,7 +14,7 @@ UserController.prototype.loginUser = async function(req, res, next){
 };
 
 UserController.prototype.getCurrentUser = async function(req, res, next){
-    userService.getCurrentUser(req, res, next);
+    return userService.getCurrentUser(req, res, next);
 };
 
 module.exports = UserController;

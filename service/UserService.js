@@ -17,9 +17,9 @@ UserService.prototype.checkExistUser = async function (email, phone, password, r
         return userProfile.validatePassword(password);
     });
     if (isExistUser.length > 0) {
-        return res.status(409).json({
+        return res.status(401).json({
             errors: {
-                code: 409,
+                code: 1409,
                 message: 'User already exists!'
             }
         });
@@ -100,18 +100,18 @@ UserService.prototype.loginUser = function(req, res, next){
     const {body: {userProfile}} = req;
 
     if (!userProfile.login) {
-        return res.status(408).json({
+        return res.status(401).json({
             errors: {
-                code: 408,
+                code: 1408,
                 message: 'Login is empty'
             }
         });
     }
 
     if (!userProfile.password) {
-        return res.status(407).json({
+        return res.status(401).json({
             errors: {
-                code: 407,
+                code: 1407,
                 message: 'Password is empty'
             }
         });
@@ -124,9 +124,9 @@ UserService.prototype.loginUser = function(req, res, next){
             return res.json({userProfile: user.toAuthJSON()});
         }
 
-        return res.status(403).json({
+        return res.status(401).json({
             errors: {
-                code: 403,
+                code: 1403,
                 message: 'Password and login did not match',
             },
         });
@@ -139,9 +139,9 @@ UserService.prototype.getCurrentUser = function(req, res, next){
     return UserProfiles.findById(id)
         .then((userProfile) => {
             if (!userProfile) {
-                return res.status(404).json({
+                return res.status(401).json({
                     errors: {
-                        code: 404,
+                        code: 1404,
                         message: 'User not found'
                     }
                 });

@@ -1,8 +1,5 @@
-const mongoose = require('mongoose');
-
 const router = require('express').Router();
 const auth = require('./auth');
-const UserProfiles = mongoose.model('UserProfiles');
 
 const UserController = require('../../../controller/UserController.js');
 

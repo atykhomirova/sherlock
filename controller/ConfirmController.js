@@ -6,7 +6,7 @@ function ConfirmController() {
 }
 
 ConfirmController.prototype.sendConfirmEmail = function(req, res, next){
-    confirmService.sendConfirmEmail(req, res, next);
+    return confirmService.sendConfirmEmail(req, res, next);
 };
 
 ConfirmController.prototype.checkConfirmEmail = async function(req, res, next){

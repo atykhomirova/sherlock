@@ -34,14 +34,19 @@ ConfirmService.prototype.sendEmail = function (id, email, code, res) {
     });
 };
 
-ConfirmService.prototype.checkEmailForConfirm = async function (email) {
+ConfirmService.prototype.checkEmailForConfirm = async function (email, res) {
     var userProfiles = await UserProfiles.find({emails: {$elemMatch: {email: email}}}).exec();
     if (userProfiles.length > 0) {
         for (var i = 0; i < userProfiles.length; i++) {
             if (userProfiles[0].emails.length > 0){
                 for (var j = 0; j < userProfiles[i].emails.length; j++) {
                     if (userProfiles[i].emails[j].primary && userProfiles[i].emails[j].status) {
-                        return true;
+                        return res.status(401).json({
+                            errors: {
+                                code: 401,
+                                message: 'Email was confirm another user'
+                            }
+                        });
                     }
                 }
             }
@@ -54,15 +59,11 @@ ConfirmService.prototype.checkConfirmEmail = async function(req, res, next){
     const email = req.query.email;
     const token = req.query.token;
 
-    var isEmailConfirm = await this.checkEmailForConfirm(email);
-    if (isEmailConfirm){
-        return res.status(401).json({
-            errors: {
-                code: 401,
-                message: 'Email was confirm another user'
-            }
-        });
+    var checkEmailForConfirm = await this.checkEmailForConfirm(email, res);
+    if (checkEmailForConfirm){
+        return checkEmailForConfirm;
     }
+
     UserProfiles.findById(id)
         .then((userProfile) => {
             for (var i = 0; i < userProfile.emails.length; i++) {
@@ -91,14 +92,9 @@ ConfirmService.prototype.sendConfirmEmail = async function(req, res, next){
     const id = req.query.id;
     const email = req.query.email;
 
-    var isConfirmEmail = await this.checkEmailForConfirm(email);
-    if (isConfirmEmail) {
-        return res.status(401).json({
-            errors: {
-                code: 401,
-                message: 'Email was confirm another user'
-            }
-        });
+    var checkEmailForConfirm = await this.checkEmailForConfirm(email, res);
+    if (checkEmailForConfirm){
+        return checkEmailForConfirm;
     }
 
     UserProfiles.findById(id).then((userProfile) => {
@@ -122,7 +118,7 @@ ConfirmService.prototype.sendConfirmEmail = async function(req, res, next){
             }
         });
 
-    });
+    }).catch(err => next(err));
 };
 
 module.exports = ConfirmService;
